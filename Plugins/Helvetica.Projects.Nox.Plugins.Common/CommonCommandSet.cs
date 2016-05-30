@@ -82,31 +82,35 @@ namespace Helvetica.Projects.Nox.Plugins.Common
 
         private void StoreTask(INoxContext context)
         {
+            var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
             var dictation = context.VariableResults.FirstOrDefault(c => c.Key == "task");
             var data = dictation.Value;
             _todoList.Add(data);
-            context.SpeechSynthesizer.Speak("I'll store that for you.");
+            speechSynthesizer.Speak("I'll store that for you.");
         }
 
         private void SpeakTasks(INoxContext context)
         {
-            context.SpeechSynthesizer.Speak("I have the following");
+            var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
+            speechSynthesizer.Speak("I have the following");
             foreach (string task in _todoList)
             {
-                context.SpeechSynthesizer.Speak(task);
+                speechSynthesizer.Speak(task);
             }
         }
 
         private void SpeakDay(INoxContext context)
         {
+            var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
             var day = DateTime.Now.DayOfWeek.ToString();
-            context.SpeechSynthesizer.Speak(String.Format("{0}", day));
+            speechSynthesizer.Speak(String.Format("{0}", day));
         }
 
         private void SpeakTime(INoxContext context)
         {
+            var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
             var time = DateTime.Now.ToString("h:mm");
-            context.SpeechSynthesizer.Speak(String.Format("It is {0}", time));
+            speechSynthesizer.Speak(String.Format("It is {0}", time));
         }
     }
 }

@@ -15,8 +15,9 @@ namespace Helvetica.Projects.Nox.Core
 {
     public class RecognitionCore: IDisposable
     {
-        protected PluginLoader<INoxCommandSet> CommandSetLoader;
+        public ServiceContainer ServiceContainer { get; set; }
 
+        protected PluginLoader<INoxCommandSet> CommandSetLoader;
         private readonly SpeechRecognitionEngine _recognitionEngine;
         private readonly Dictionary<Grammar, Action<INoxContext>> _commandActionLookup = new Dictionary<Grammar, Action<INoxContext>>();
         private readonly Dictionary<Grammar, Action<INoxContext>> _systemActionLookup = new Dictionary<Grammar, Action<INoxContext>>();
@@ -27,8 +28,9 @@ namespace Helvetica.Projects.Nox.Core
 
         public RecognitionCore(string pluginDirectoryPath = "plugins", SpeechRecognitionEngine recognitionEngine = null)
         {
-             CommandSetLoader = new PluginLoader<INoxCommandSet>(pluginDirectoryPath);
+            ServiceContainer = new ServiceContainer();
 
+            CommandSetLoader = new PluginLoader<INoxCommandSet>(pluginDirectoryPath);
             _recognitionEngine = recognitionEngine ?? new SpeechRecognitionEngine();
 
             _recognitionEngine.SetInputToDefaultAudioDevice();
@@ -56,7 +58,8 @@ namespace Helvetica.Projects.Nox.Core
                 .Phrase("Nox")
                 .Handle(context =>
                 {
-                    context.SpeechSynthesizer.Speak("Yes?");
+                    var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
+                    speechSynthesizer.Speak("Yes?");
                     SetSystemState(true);
                 });
 
@@ -67,7 +70,8 @@ namespace Helvetica.Projects.Nox.Core
                 .Phrase("Go to sleep")
                 .Handle(context =>
                 {
-                    context.SpeechSynthesizer.Speak("You got it boss!");
+                    var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
+                    speechSynthesizer.Speak("You got it boss!");
                     SetSystemState(false);
                 });
 
@@ -79,7 +83,8 @@ namespace Helvetica.Projects.Nox.Core
                 .Phrase("I didn't say anything")
                 .Handle(context =>
                 {
-                    context.SpeechSynthesizer.Speak("Very sorry, I'll be here if you need me.");
+                    var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
+                    speechSynthesizer.Speak("Very sorry, I'll be here if you need me.");
                     SetSystemState(false);
                 });
 
@@ -90,7 +95,8 @@ namespace Helvetica.Projects.Nox.Core
                 .Phrase("Thanks")
                 .Handle(context =>
                 {
-                    context.SpeechSynthesizer.Speak("Anything for you sir.");
+                    var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
+                    speechSynthesizer.Speak("Anything for you sir.");
                 });
 
             Add(thanks);
@@ -100,7 +106,8 @@ namespace Helvetica.Projects.Nox.Core
                 .Phrase("Thank you")
                 .Handle(context =>
                 {
-                    context.SpeechSynthesizer.Speak("You're welcome!");
+                    var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
+                    speechSynthesizer.Speak("You're welcome!");
                 });
 
             Add(thanks);
@@ -113,8 +120,9 @@ namespace Helvetica.Projects.Nox.Core
                 {
                     if (_systemState)
                     {
+                        var speechSynthesizer = context.ServiceContainer.GetService<ISpeechSynthesizer>(true);
                         var dictation = context.VariableResults.FirstOrDefault(c => c.Key == "dictation_data");
-                        context.SpeechSynthesizer.Speak("What?");
+                        speechSynthesizer.Speak("What?");
                         Console.WriteLine(dictation);
                     }
                 });
@@ -135,6 +143,12 @@ namespace Helvetica.Projects.Nox.Core
         public void Add(Command command)
         {
             Add(command, _commandActionLookup);
+        }
+
+        public void AddService<T>(T service)
+            where T: class
+        {
+            ServiceContainer.GetOrAddService<T>(service);
         }
 
         public void Start()
@@ -275,29 +289,35 @@ namespace Helvetica.Projects.Nox.Core
         {
             Action<INoxContext> action;
 
-            if (_systemActionLookup.TryGetValue(grammar, out action))
+            try
             {
+                if (_systemActionLookup.TryGetValue(grammar, out action))
+                {
+                    if (action != null)
+                    {
+                        action(context);
+                    }
+
+                    return;
+                }
+
+                if (!_commandActionLookup.TryGetValue(grammar, out action)) return;
+
                 if (action != null)
                 {
                     action(context);
+                    SetSystemStateTimer(true);
                 }
-
-                return;
             }
-            
-            if (!_commandActionLookup.TryGetValue(grammar, out action)) return;
-
-            if (action != null)
+            catch (MissingServiceException e)
             {
-                action(context);
-                SetSystemStateTimer(true);
+                Console.WriteLine(e.Message);
             }
-            
         }
 
         private INoxContext BuildContext(SpeechRecognizedEventArgs speechRecognizedEventArgs)
         {
-            INoxContext context = new NoxContext();
+            NoxContext context = new NoxContext(ServiceContainer);
             context.VariableResults = GetVariableResults(speechRecognizedEventArgs.Result.Semantics);
 
             if (speechRecognizedEventArgs.Result != null)

@@ -33,6 +33,7 @@ namespace Helvetica.Projects.Nox.Plugins.ExamplePlugin
                 .Dictation()
                 .Handle(context =>
                 {
+                    var speechSynthesizer = context.ServiceContainer.GetOrAddService<ISpeechSynthesizer>();
                     var words = context.Phrase.Words.Skip(3);
                     var text = words.Select(w => w.Text);
                     var searchTerm = string.Join(" ", text);
@@ -42,11 +43,11 @@ namespace Helvetica.Projects.Nox.Plugins.ExamplePlugin
                     switch (choice.Value)
                     {
                         case "youtube":
-                            context.SpeechSynthesizer.Speak("Searching You Tube");
+                            speechSynthesizer?.Speak("Searching You Tube");
                             SearchYoutube(searchTerm);
                             break;
                         default:
-                            context.SpeechSynthesizer.Speak("Searching Google");
+                            speechSynthesizer?.Speak("Searching Google");
                             SearchGoogle(searchTerm);
                             break;
                     }
