@@ -45,6 +45,7 @@ namespace Helvetica.Projects.Nox.Public.Sdk
         public PossiblePhrase Phrase { get; set; }
         public ReadOnlyCollection<KeyValuePair<string, string>> VariableResults { get; set; }
         public ReadOnlyCollection<KeyValuePair<string, string>> DictationResults { get; set; }
+        public Dictionary<string, ReadOnlyCollection<KeyValuePair<string, string>>> ServiceResults { get;set; }
 
         public NoxContext(ServiceContainer services)
         {

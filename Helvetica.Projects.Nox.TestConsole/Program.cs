@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
+using edu.stanford.nlp.ling;
+using edu.stanford.nlp.pipeline;
 using Helvetica.Projects.Nox.Core;
 using Helvetica.Projects.Nox.Public.Sdk;
 using Helvetica.Projects.Nox.Public.Sdk.Interfaces;
+using java.util;
 
 namespace Helvetica.Projects.Nox.TestConsole
 {
@@ -17,7 +21,7 @@ namespace Helvetica.Projects.Nox.TestConsole
 
         public void CallEvent(string message)
         {
-            OnServiceEventFired(message);   
+            OnServiceEventFired(message);
         }
 
         protected virtual void OnServiceEventFired(string obj)
@@ -26,7 +30,7 @@ namespace Helvetica.Projects.Nox.TestConsole
         }
     }
 
-    [Export(typeof(INoxCommandSet))]
+    [Export(typeof (INoxCommandSet))]
     public class TestServiceCommandSet : INoxCommandSet
     {
         public IEnumerable<Command> Commands { get; set; }
@@ -51,6 +55,29 @@ namespace Helvetica.Projects.Nox.TestConsole
         }
     }
 
+    public class NlpWrapper
+    {
+        public NlpWrapper()
+        {
+            var props = new Properties();
+            props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
+            props.setProperty("ner.useSUTime", "0");
+
+            var dir = @"E:\Data\CoreNLP";
+            Directory.SetCurrentDirectory(dir);
+            var pipeline = new StanfordCoreNLP(props);
+
+            var text = "This is text.";
+            
+            var annotation = pipeline.process(text);
+            
+            
+
+
+            Console.WriteLine(annotation);
+        }
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -65,7 +92,7 @@ namespace Helvetica.Projects.Nox.TestConsole
             core.LoadCommandSet(new TestServiceCommandSet());
             core.AddService<ISpeechSynthesizer>(new NoxSpeechSynthesizer());
             core.AddService<TestService>(testService);
- 
+            core.AddService(new NlpWrapper());
             core.Start();
             
             Console.WriteLine("Press Enter to Exit");

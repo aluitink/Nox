@@ -17,7 +17,9 @@ namespace Helvetica.Projects.Nox.Core
     {
         public ServiceContainer ServiceContainer { get; set; }
 
+        protected PluginLoader<INoxService> ServiceLoader;
         protected PluginLoader<INoxCommandSet> CommandSetLoader;
+        
         private readonly SpeechRecognitionEngine _recognitionEngine;
         private readonly Dictionary<Grammar, Action<INoxContext>> _commandActionLookup = new Dictionary<Grammar, Action<INoxContext>>();
         private readonly Dictionary<Grammar, Action<INoxContext>> _systemActionLookup = new Dictionary<Grammar, Action<INoxContext>>();
@@ -30,6 +32,7 @@ namespace Helvetica.Projects.Nox.Core
         {
             ServiceContainer = new ServiceContainer();
 
+            ServiceLoader = new PluginLoader<INoxService>(pluginDirectoryPath);
             CommandSetLoader = new PluginLoader<INoxCommandSet>(pluginDirectoryPath);
             _recognitionEngine = recognitionEngine ?? new SpeechRecognitionEngine();
 
@@ -333,6 +336,19 @@ namespace Helvetica.Projects.Nox.Core
 
                 context.Phrase = retPhrase;
             }
+
+            try
+            {
+                foreach (INoxService noxService in ServiceLoader.Plugins)
+                {
+                    context.ServiceResults.Add(noxService.GetType().ToString(), noxService.HandleContext(context));
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
             return context;
         }
 
